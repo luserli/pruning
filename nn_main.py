@@ -17,7 +17,6 @@ print("测试集维度：" + str(test_set_x.shape))
 
 #指定层数和节点数
 layer_dims = [train_set_x.shape[0], 5, 4, 3, 2, 1]
-layer_dims = [train_set_x.shape[0], 5, 4, 3, 2, 1]
 print('神经网络层数:' + str(len(layer_dims)))
 
 #标准化
@@ -25,7 +24,7 @@ train_x = train_set_x / 255
 test_x = test_set_x / 255
 
 learning_rate = 0.035
-num_iterations = 2950
+num_iterations = 4000
 
 parameters, learning_rate = model(train_x, train_y, test_x, test_y, layer_dims, learning_rate, num_iterations)
 

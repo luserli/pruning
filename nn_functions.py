@@ -168,19 +168,16 @@ def model(X, Y, X_test, Y_test, layers_dims, learning_rate, num_iterations):
     np.random.seed(2)
     costs = []
     parameters = initialize_parameters(layers_dims)
-    for i in tqdm(range(0, num_iterations), ncols=88, postfix='网络正在训练中哦 ~O(∩_∩)O~'):
-        AL, caches = forward.forward_function(X, parameters)
-        cost = np.squeeze(forward.cost_function(AL, Y))
-        grads = backward.backward_function(AL, Y, caches)
-        parameters = update_parameters(parameters, grads, learning_rate)
-        if cost < 0.13:
-            learning_rate = 0.0075
-        elif cost < 0.1:
-            learning_rate = 0.005
-
-        if i % 100 == 0:
+    with tqdm(total=num_iterations) as t:
+        for i in range(0, num_iterations):
+            AL, caches = forward.forward_function(X, parameters)
+            cost = np.squeeze(forward.cost_function(AL, Y))
+            grads = backward.backward_function(AL, Y, caches)
+            parameters = update_parameters(parameters, grads, learning_rate)
             costs.append(cost)
-            tqdm.write("第" + str(i) + "次迭代，成本值为：" + str(cost))
+            t.set_description('Training %i' % i)
+            t.set_postfix(cost=cost,learning_rate=learning_rate)
+            t.update(1)
 
     Y_prediction_train = predict(parameters, X)
     Y_prediction_test = predict(parameters, X_test)

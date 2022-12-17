@@ -1,5 +1,3 @@
-import os
-from PIL import Image
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,7 +27,6 @@ def forward_f(X, parameters):
 
 #Retrain function
 def retrain(parameters, X, Y, learning_rate, num_iterations):
-	costs = []
 	with tqdm(total=num_iterations) as t:
 		for i in range(0, num_iterations):
 			AL, caches = forward_f(X, parameters)
@@ -37,28 +34,24 @@ def retrain(parameters, X, Y, learning_rate, num_iterations):
 			grads = backward.backward_function(AL, Y, caches)
 			parameters = update_parameters(parameters, grads, learning_rate)
 			parameters = prun(parameters, mask_w)
-			costs.append(cost)
 			t.set_description('Retrain %i' % i)
-			t.set_postfix(cost=cost,learning_rate=learning_rate)
+			t.set_postfix(cost=cost)
 			t.update(1)
 
-	return parameters, costs
+	return parameters, cost
 
 #Return the retention of parameters after pruning
-def parameter_retention(parameters):
-	N=[]
-	for n in range(1,L):
-		nl=parameters['W'+str(l)]!=0
-		N.append(nl)
+def parameter_retention(prun_parameter, parameters):
+	N=prun_parameter['W'+str(1)]==parameters['W'+str(1)]
 	n=0
 	num=0
 	for i in N:
-		for j in i:
-			for v in j:
-				num+=1
-				if v == True:
-					n+=1
-	print("\nThe retention of parameters after pruning: ", round(n/num*100,2),"%")
+		for v in i:
+			num+=1
+			if v==False:
+				n+=1
+	print("\nParameter pruning degree: ", round(n/num*100,3),"%")
+
 #Print accuracy
 def accuracy(parameters):
 	Y_prediction_train = predict(parameters, train_x)
@@ -76,82 +69,59 @@ test_x = test_set_x / 255
 ##load parameters
 f_parameters = 'datasets/parameters.npy'
 parameters = np.load(f_parameters, allow_pickle='TRUE').item()
-L = len(parameters)//2
+L = len(parameters)//2 
 
 print("Original parameters: ")
 accuracy(parameters)
 
+def array0(a):
+	b=[]
+	b.append(0)
+	for i in a:
+		for j in i:
+			if j != 0:
+				b.append(j)
+	return b
+
 prun_parameter = np.load(f_parameters, allow_pickle='TRUE').item()
 
-#Make mask
-mask_w=[]
-threshold=np.percentile(prun_parameter['W'+str(l)], 100)
-for l in range(1,L):
-	ms=prun_parameter['W'+str(l)]<threshold
-	mask_w.append(ms)
+h_threshold=1
+delta=0.01
+learning_rate=0.05
+num_iterations=200
 
-#Pruning parameters
-prun_parameter=prun(prun_parameter, mask_w)#parameters pruning
-
-print("\nPruning parameters: ")
-accuracy(prun_parameter)
-
-learning_rate=0.1
-num_iterations=3000
-
-retrain_parameters , costs= retrain(prun_parameter, train_x, train_y, learning_rate, num_iterations)
-parameter_retention(retrain_parameters)
-
-print("\nPruning and retrain parameters: ")
-accuracy(retrain_parameters)
+n=h_threshold
+degree=[]
+costs=[]
+for i in range(20):
+	#Make mask
+	mask_w=[]
+	for l in range(1,L):
+		b=array0(prun_parameter['W'+str(l)])
+		threshold=np.percentile(b, 100-h_threshold)
+		ms=prun_parameter['W'+str(l)]<threshold
+		if i>1:
+			ms=np.multiply(ms,mask_w_l[l-1])
+		mask_w.append(ms)
+		# print("threshold "+str(l)+": "+str(threshold))
+	mask_w_l=mask_w
+	#Pruning parameters
+	prun_parameter=prun(prun_parameter, mask_w)#parameters pruning
+	degree.append(n)
+	print("\nParameter pruning degree: ", round(n,2),"%")
+	print("\nPruning parameters: ")
+	accuracy(prun_parameter)
+	retrain_parameters, cost = retrain(prun_parameter, train_x, train_y, learning_rate, num_iterations)
+	costs.append(cost)
+	print("\nPruning and retrain parameters: ")
+	accuracy(retrain_parameters)
+	np.save('datasets/prun_parameter/prun_parameters'+str(n)+'.npy', retrain_parameters)
+	n+=h_threshold
+	# h_threshold+=delta*i
+degree_costs={
+	'degree':degree,
+	'costs':costs
+}
 
 #save parameters
-np.save('datasets/prun_parameters.npy', retrain_parameters)
-np.save('datasets/prun_costs.npy', costs)
-
-#图片验证
-Imgs = []
-sexs = []
-Classes = []
-i = 0
-
-list = os.listdir('photos_demo')
-list.sort(key=lambda x: int(x.replace("","").split('.')[0]))#按顺序排列
-
-for fname in list:
-    dir = 'photos_demo/' + fname
-    Imgs.append(dir)
-    image = Image.open(dir).resize((80, 45))
-    image = np.array(image)
-    my_image = np.array(image.reshape((1, train_x.shape[0])).T)#转为向量
-    my_predicted_image = predict(retrain_parameters, my_image)#预测结果
-    sex = np.squeeze(my_predicted_image)
-    sexs.append(sex)
-    if sex==1:
-        classes = 'car'
-    else:
-        classes = 'noncar'
-    Classes.append(classes)
-    # print('The picture \"' + str(fname) + "\": y = " + str(sex) + ", your algorithm predicts a \"" + str(classes) + "\" picture.")
-    i += 1
-
-#显示判断结果
-plt.figure(figsize=(13, 8))
-numpx = int(len(Imgs) / 4) if len(Imgs) % 4 == 0 else int(len(Imgs) / 4 + 1)
-for i in range(len(Imgs)):
-    image = Image.open(Imgs[i])
-    plt.subplot(numpx, 4, i+1)
-    plt.imshow(image)
-    plt.title('It\'s a \"' + str(Classes[i]) + '\"'+'('+ str(sexs[i]) +')'+'picture')
-    plt.axis('off')
-
-#cost figure
-plt.figure()
-plt.subplot(1, 1, 1)
-plt.plot(costs)
-plt.ylabel('cost')
-plt.xlabel('iterations (per hundreds)')
-plt.title("Learning rate ="+str(learning_rate))
-# f = plt.gcf()  #获取当前图像
-# f.savefig(r'./photos/pruning_costs.png')
-plt.show()
+np.save('datasets/degree_costs.npy', degree_costs)

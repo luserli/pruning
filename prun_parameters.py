@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from nn_functions import *
 
 f1_parameters = 'datasets/parameters.npy'
-prun_parameter = 'datasets/prun_parameter/prun_parameters8.npy'
+prun_parameter = 'datasets/prun_parameter/prun_parameters20.npy'
 f1_costs = 'datasets/prun_costs.npy'
 parameters = np.load(f1_parameters, allow_pickle='TRUE').item()
 prun_parameters = np.load(prun_parameter, allow_pickle='TRUE').item()
@@ -25,16 +25,11 @@ def degree(parameters):
 					n+=1
 	print("Parameter pruning degree: ", round(n/num*100,3),"%")
 
-print('Ori parameter: ')
-degree(parameters)
-print('Pruned parameter: ')
-degree(prun_parameters)
-
 def accuracy(parameters):
-	Y_prediction_train = predict(parameters, train_x)
-	Y_prediction_test = predict(parameters, test_x)
-	print("Training set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_train - train_y)) * 100) ,"%")
-	print("Test set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_test - test_y)) * 100) ,"%")
+    Y_prediction_train = predict(parameters, train_x)
+    Y_prediction_test = predict(parameters, test_x)
+    print("Training set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_train - train_y)) * 100) ,"%")
+    print("Test set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_test - test_y)) * 100) ,"%")
 
 ##load dataset
 datas = 'datasets/carvnocar.h5'
@@ -42,6 +37,11 @@ train_set_x, train_y, test_set_x, test_y = load_files(datas)
 train_x = train_set_x / 255
 test_x = test_set_x / 255
 
+print('Ori parameter: ')
+degree(parameters)
+accuracy(parameters)
+print('Pruned parameter: ')
+degree(prun_parameters)
 accuracy(prun_parameters)
 
 fname='datasets/degree_costs.npy'

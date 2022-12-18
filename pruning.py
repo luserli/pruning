@@ -40,25 +40,12 @@ def retrain(parameters, X, Y, learning_rate, num_iterations):
 
 	return parameters, cost
 
-#Return the retention of parameters after pruning
-def parameter_retention(prun_parameter, parameters):
-	N=prun_parameter['W'+str(1)]==parameters['W'+str(1)]
-	n=0
-	num=0
-	for i in N:
-		for v in i:
-			num+=1
-			if v==False:
-				n+=1
-	print("\nParameter pruning degree: ", round(n/num*100,3),"%")
-
 #Print accuracy
 def accuracy(parameters):
 	Y_prediction_train = predict(parameters, train_x)
 	Y_prediction_test = predict(parameters, test_x)
 	print("Training set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_train - train_y)) * 100) ,"%")
 	print("Test set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_test - test_y)) * 100) ,"%")
-
 
 ##load dataset
 datas = 'datasets/carvnocar.h5'
@@ -88,12 +75,12 @@ prun_parameter = np.load(f_parameters, allow_pickle='TRUE').item()
 h_threshold=1
 delta=0.01
 learning_rate=0.05
-num_iterations=200
+num_iterations=1000
 
 n=h_threshold
 degree=[]
 costs=[]
-for i in range(20):
+for i in range(22):
 	#Make mask
 	mask_w=[]
 	for l in range(1,L):
@@ -111,6 +98,7 @@ for i in range(20):
 	print("\nParameter pruning degree: ", round(n,2),"%")
 	print("\nPruning parameters: ")
 	accuracy(prun_parameter)
+	#Retrain parameters
 	retrain_parameters, cost = retrain(prun_parameter, train_x, train_y, learning_rate, num_iterations)
 	costs.append(cost)
 	print("\nPruning and retrain parameters: ")
@@ -118,10 +106,9 @@ for i in range(20):
 	np.save('datasets/prun_parameter/prun_parameters'+str(n)+'.npy', retrain_parameters)
 	n+=h_threshold
 	# h_threshold+=delta*i
+
 degree_costs={
 	'degree':degree,
 	'costs':costs
 }
-
-#save parameters
 np.save('datasets/degree_costs.npy', degree_costs)

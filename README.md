@@ -209,7 +209,7 @@ np.percentile(arrary, number)
 layer_dims = [train_set_x.shape[0], 5, 4, 3, 2, 1]
 ```
 
-<img src="photos/nn_.png" style="zoom:80%;" />
+![](figure/nn_.jpg)
 
 这是一个简单的MLP，作用是判断输入的图片中有没有车，如果图片里有车就输出1，图片里没有车就输出0。
 

@@ -47,6 +47,22 @@ def accuracy(parameters):
 	print("Training set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_train - train_y)) * 100) ,"%")
 	print("Test set accuracy："  , format(100 - np.mean(np.abs(Y_prediction_test - test_y)) * 100) ,"%")
 
+#Print Pruning degree
+def degree(parameters):
+	n=0
+	num=0
+	L=len(parameters)//2
+	for l in range(1, L):
+		N=parameters['W'+str(l)]
+		for i in N:
+			for v in i:
+				num+=1
+				if v==0:
+					n+=1
+	degree=n/num*100
+	print("Parameter pruning degree: ", round(degree,3),"%")
+	return degree
+
 ##load dataset
 datas = 'datasets/carvnocar.h5'
 train_set_x, train_y, test_set_x, test_y = load_files(datas)
@@ -56,14 +72,24 @@ test_x = test_set_x / 255
 ##load parameters
 f_parameters = 'datasets/parameters.npy'
 parameters = np.load(f_parameters, allow_pickle='TRUE').item()
+
 L = len(parameters)//2 
 
 print("Original parameters: ")
 accuracy(parameters)
 
+def acc0(a):
+	n=0
+	for i in a:
+		for j in i:
+			if j == 0:
+				n+=1
+	return n
+
 def array0(a):
 	b=[]
-	b.append(0)
+	if acc0(a)>1:
+		b.append(0)
 	for i in a:
 		for j in i:
 			if j != 0:
@@ -71,44 +97,42 @@ def array0(a):
 	return b
 
 prun_parameter = np.load(f_parameters, allow_pickle='TRUE').item()
-
-h_threshold=1
-delta=0.01
+#Hyper-parameters
+h_threshold=5
+delta=0.1
 learning_rate=0.05
-num_iterations=1000
+num_iterations=220
 
-n=h_threshold
-degree=[]
+degrees=[]
 costs=[]
-for i in range(22):
+for i in range(1, 40):
 	#Make mask
 	mask_w=[]
 	for l in range(1,L):
-		b=array0(prun_parameter['W'+str(l)])
-		threshold=np.percentile(b, 100-h_threshold)
-		ms=prun_parameter['W'+str(l)]<threshold
+		a=prun_parameter['W'+str(l)]
+		b=array0(a)
+		threshold=np.percentile(np.abs(b), h_threshold)
+		ms=np.abs(a)>threshold
 		if i>1:
-			ms=np.multiply(ms,mask_w_l[l-1])
+			ms=np.multiply(ms,mask_w_l[l-1])# Multiply by the mask matrix of the previous step
 		mask_w.append(ms)
-		# print("threshold "+str(l)+": "+str(threshold))
-	mask_w_l=mask_w
+		# print("threshold "+str(l)+": "+str(threshold))# print threshold
+	mask_w_l=mask_w# Save the mask matrix of the previous step
 	#Pruning parameters
 	prun_parameter=prun(prun_parameter, mask_w)#parameters pruning
-	degree.append(n)
-	print("\nParameter pruning degree: ", round(n,2),"%")
-	print("\nPruning parameters: ")
+	print("\n "+str(i)+" Pruning parameters: ")
+	n=degree(prun_parameter)
+	degrees.append(n)
 	accuracy(prun_parameter)
 	#Retrain parameters
 	retrain_parameters, cost = retrain(prun_parameter, train_x, train_y, learning_rate, num_iterations)
 	costs.append(cost)
 	print("\nPruning and retrain parameters: ")
 	accuracy(retrain_parameters)
-	np.save('datasets/prun_parameter/prun_parameters'+str(n)+'.npy', retrain_parameters)
-	n+=h_threshold
-	# h_threshold+=delta*i
+	np.save('datasets/prun_parameter_1/prun_parameters'+str(i)+'.npy', retrain_parameters)
+	#Iterative pruning (Not used during the experiment)
+    # h_threshold+=delta*i
+	# h_threshold+=5
 
-degree_costs={
-	'degree':degree,
-	'costs':costs
-}
+degree_costs={'degree':degrees,'costs':costs}
 np.save('datasets/degree_costs.npy', degree_costs)

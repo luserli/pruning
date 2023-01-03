@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 from nn_functions import *
 
 f1_parameters = 'datasets/parameters.npy'
-prun_parameter = 'datasets/prun_parameter/prun_parameters20.npy'
+prun_parameter = 'datasets/prun_parameter_1/prun_parameters39.npy'
 f1_costs = 'datasets/prun_costs.npy'
 parameters = np.load(f1_parameters, allow_pickle='TRUE').item()
 prun_parameters = np.load(prun_parameter, allow_pickle='TRUE').item()
-# print(parameters)
-# print(prun_parameters)
+print(parameters['W1'])
+print(prun_parameters['W1'])
 
 def degree(parameters):
 	n=0
@@ -23,7 +23,9 @@ def degree(parameters):
 				num+=1
 				if v==0:
 					n+=1
-	print("Parameter pruning degree: ", round(n/num*100,3),"%")
+	degree=round(n/num*100,3)
+	print("Parameter pruning degree: ", degree,"%")
+	return degree
 
 def accuracy(parameters):
     Y_prediction_train = predict(parameters, train_x)
